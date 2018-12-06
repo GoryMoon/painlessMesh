@@ -161,12 +161,10 @@ ICACHE_FLASH_ATTR MeshConnection::MeshConnection(AsyncClient *client_ptr, painle
     this->nodeSyncTask.set(
             syncInterval, TASK_FOREVER, [this](){
         staticThis->debugMsg(SYNC, "nodeSyncTask(): \n");
-        staticThis->debugMsg(SYNC, "nodeSyncTask(): request with %u\n", 
-                this->nodeId);
+        staticThis->debugMsg(SYNC, "nodeSyncTask(): request with %u\n", this->nodeId);
         auto saveConn = staticThis->findConnection(this->client);
         String subs = staticThis->subConnectionJson(saveConn);
-        staticThis->sendMessage(saveConn, this->nodeId, 
-                staticThis->_nodeId, NODE_SYNC_REQUEST, subs, true);
+        staticThis->sendMessage(saveConn, this->nodeId, staticThis->_nodeId, NODE_SYNC_REQUEST, subs, true);
     });
     staticThis->_scheduler.addTask(this->nodeSyncTask);
     if (station)
@@ -399,8 +397,7 @@ std::shared_ptr<MeshConnection> ICACHE_FLASH_ATTR painlessMesh::findConnection(u
             return connection;
         }
 
-        if (painlessmesh::stringContainsNumber(connection->subConnections,
-            String(nodeId))) { // check sub-connections
+        if (painlessmesh::stringContainsNumber(connection->subConnections, String(nodeId))) { // check sub-connections
             debugMsg(GENERAL, "findConnection(%u): Found Sub Connection through %u\n", nodeId, connection->nodeId);
             return connection;
         }
@@ -449,6 +446,7 @@ String ICACHE_FLASH_ATTR painlessMesh::subConnectionJsonHelper(
             ret += String("{\"nodeId\":") + String(sub->nodeId);
             if (sub->root)
                 ret += String(",\"root\":true");
+            ret += String(",\"version\":") + sub->version;
             ret += String(",\"subs\":") + sub->subConnections + String("}");
         }
     }
@@ -568,9 +566,12 @@ void ICACHE_FLASH_ATTR MeshConnection::handleMessage(String &buffer, uint32_t re
 
     case SINGLE:
     case TIME_DELAY:
+    case OTA:
         if ((uint32_t)root["dest"] == staticThis->getNodeId()) {  // msg for us!
             if (t_message == TIME_DELAY) {
                 staticThis->handleTimeDelay(rConn, root, receivedAt);
+            } else if (t_message == OTA) {
+                staticThis->handleOTA(rConn, root, false);
             } else {
                 if (staticThis->receivedCallback)
                     staticThis->receivedCallback((uint32_t)root["from"], msg);
@@ -585,7 +586,24 @@ void ICACHE_FLASH_ATTR MeshConnection::handleMessage(String &buffer, uint32_t re
             }
         }
         break;
-
+    case OTA_BROADCAST:
+        if (msg == "Error") {
+            String tempStr;
+            root.printTo(tempStr);
+            auto conn = staticThis->findConnection((uint32_t)root["dest"], this->nodeId);
+            if (conn) {
+                conn->addMessage(tempStr);
+            }
+        }
+        if (staticThis->_otaResponses > 0) {
+            staticThis->_otaResponses--;
+            if (staticThis->_otaResponses == 0) {
+                staticThis->sendOTAOK(rConn, staticThis->_otaFromId, true);
+            }
+        } else {
+            staticThis->handleOTA(rConn, root, true);
+        }
+        break;
     case BROADCAST:
         staticThis->broadcastMessage((uint32_t)root["from"], BROADCAST, msg, rConn);
         if (staticThis->receivedCallback)

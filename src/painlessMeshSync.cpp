@@ -135,6 +135,11 @@ void ICACHE_FLASH_ATTR painlessMesh::handleNodeSync(std::shared_ptr<MeshConnecti
         // 
         debugMsg(SYNC, "handleNodeSync(): conn->nodeId updated from %u to %u\n", conn->nodeId, remoteNodeId);
         conn->nodeId = remoteNodeId;
+        
+        if (root.containsKey("version")) {
+            String s = root["version"];
+            conn->version = s;
+        }
         // TODO: Move this to its own function
         newConnectionTask.set(TASK_SECOND, TASK_ONCE, [remoteNodeId]() {
             staticThis->debugMsg(CONNECTION, "newConnectionTask():\n");

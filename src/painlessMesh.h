@@ -15,6 +15,7 @@ using namespace std;
 #ifdef ESP32
 #include <WiFi.h>
 #include <AsyncTCP.h>
+#include <Update.h>
 #elif defined(ESP8266)
 #include <ESP8266WiFi.h>
 #include <ESPAsyncTCP.h>
@@ -34,9 +35,10 @@ enum meshPackageType {
     TIME_SYNC         = 4,
     NODE_SYNC_REQUEST = 5,
     NODE_SYNC_REPLY   = 6,
-    CONTROL           = 7,  //deprecated
+    OTA               = 7,  //OTA packet
     BROADCAST         = 8,  //application data for everyone
-    SINGLE            = 9   //application data for a single node
+    SINGLE            = 9,  //application data for a single node
+    OTA_BROADCAST     = 10  //used to update all connected devices
 };
 
 template<typename T>
@@ -72,11 +74,15 @@ typedef std::function<void(uint32_t from, String &msg)> receivedCallback_t;
 typedef std::function<void()> changedConnectionsCallback_t;
 typedef std::function<void(int32_t offset)> nodeTimeAdjustedCallback_t;
 typedef std::function<void(uint32_t nodeId, int32_t delay)> nodeDelayCallback_t;
+typedef std::function<void()> otaUpdateError_t;
 
 class painlessMesh {
 public:
     //inline functions
     uint32_t            getNodeId(void) { return _nodeId; };
+
+    String              getVersion(void) { return _version; };
+    void                setVersion(String v) { _version = v; };
 
     /**
      * Set the node as an root/master node for the mesh
@@ -139,7 +145,7 @@ public:
      * Check whether this node is part of a mesh with a root in
      * it.
      */
-    bool isRooted();
+    bool                isRooted();
 
     // in painlessMeshSync.cpp
     uint32_t            getNodeTime(void);
@@ -217,6 +223,10 @@ protected:
 
     void                tcpServerInit();
 
+    void                handleOTA(std::shared_ptr<MeshConnection> conn, JsonObject& root, bool broadcast);
+    void                sendOTAOK(std::shared_ptr<MeshConnection> conn, uint32_t from, bool broadcast);
+    void                sendOTAError(std::shared_ptr<MeshConnection> conn, bool broadcast);
+    void                onOtaError(otaUpdateError_t onOtaError);
     // callbacks
     // in painlessMeshConnection.cpp
     void                eventHandleInit();
@@ -228,6 +238,7 @@ protected:
     changedConnectionsCallback_t    changedConnectionsCallback;
     nodeTimeAdjustedCallback_t      nodeTimeAdjustedCallback;
     nodeDelayCallback_t             nodeDelayReceivedCallback;
+    otaUpdateError_t                otaUpdateErrorCallback;
 #ifdef ESP32
     WiFiEventId_t eventScanDoneHandler;
     WiFiEventId_t eventSTAStartHandler;
@@ -249,6 +260,12 @@ protected:
     uint8_t           _meshChannel;
     uint8_t           _meshHidden;
     uint8_t           _meshMaxConn;
+    String            _version;
+
+    uint8_t           _otaResponses = 0;
+    uint32_t          _otaFromId;
+    bool              _otaError = false;
+
 
     IPAddress         _apIp;
 

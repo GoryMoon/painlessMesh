@@ -9,7 +9,6 @@
 //
 //************************************************************
 #include <painlessMesh.h>
-
 // some gpio pin that is connected to an LED...
 // on my rig, this is 5, change to the right number of your LED.
 #define   LED             2       // GPIO number of connected LED, ON ESP-12 IS GPIO2
@@ -49,9 +48,10 @@ void setup() {
 
   //mesh.setDebugMsgTypes( ERROR | MESH_STATUS | CONNECTION | SYNC | COMMUNICATION | GENERAL | MSG_TYPES | REMOTE ); // all types on
   //mesh.setDebugMsgTypes(ERROR | DEBUG | CONNECTION | COMMUNICATION);  // set before init() so that you can see startup messages
-  mesh.setDebugMsgTypes(ERROR | DEBUG | CONNECTION);  // set before init() so that you can see startup messages
+  mesh.setDebugMsgTypes(ERROR | DEBUG);  // set before init() so that you can see startup messages
 
   mesh.init(MESH_SSID, MESH_PASSWORD, &userScheduler, MESH_PORT);
+  mesh.setVersion("0.3");
   mesh.onReceive(&receivedCallback);
   mesh.onNewConnection(&newConnectionCallback);
   mesh.onChangedConnections(&changedConnectionCallback);
@@ -113,7 +113,7 @@ void sendMessage() {
 
 
 void receivedCallback(uint32_t from, String & msg) {
-  Serial.printf("startHere: Received from %u msg=%s\n", from, msg.c_str());
+  //Serial.printf("startHere: Received from %u msg=%s\n", from, msg.c_str());
 }
 
 void newConnectionCallback(uint32_t nodeId) {

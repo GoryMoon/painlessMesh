@@ -79,6 +79,7 @@ String ICACHE_FLASH_ATTR painlessMesh::buildMeshPackage(uint32_t destId, uint32_
     case NODE_SYNC_REPLY:
     {
         jsonObj["subs"] = RawJson(msg);
+        jsonObj["version"] = _version;
         if (this->isRoot())
             jsonObj["root"] = true;
         break;
