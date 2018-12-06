@@ -6,3 +6,4 @@ compile_*.sh
 .vscode/c_cpp_properties.json
 .vscode/settings.json
 doxygen/*/
+.DS_Store
