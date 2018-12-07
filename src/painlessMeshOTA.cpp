@@ -160,6 +160,7 @@ void ICACHE_FLASH_ATTR painlessMesh::handleOTA(std::shared_ptr<MeshConnection> c
         if(Update.isRunning()) {
 			Update.end(false);
 		}
+		staticThis->_otaError = false;
 		bool begin = !Update.begin(maxSketchSpace); //start with max available size
         if(begin){
             staticThis->debugMsg(ERROR, "handleOTA(): OTA start failed!\n");
@@ -179,7 +180,6 @@ void ICACHE_FLASH_ATTR painlessMesh::handleOTA(std::shared_ptr<MeshConnection> c
 				root["msg"].printTo(msg);
 				_otaResponses = _connections.size() - 1;
 				_otaFromId = (uint32_t)root["from"];
-				staticThis->debugMsg(DEBUG, "Broadcasted the OTA\n");
 				staticThis->broadcastMessage(_nodeId, OTA_BROADCAST, msg, conn);
 			}
         }
@@ -201,9 +201,6 @@ void ICACHE_FLASH_ATTR painlessMesh::handleOTA(std::shared_ptr<MeshConnection> c
 			staticThis->sendOTAError(conn, broadcast);
         }
 		if(staticThis->_otaError || !write) {
-			if (!staticThis->_otaError)
-				staticThis->debugMsg(DEBUG, "Saved: %d\n", b64len);
-
 			if (!staticThis->_otaError && (!broadcast || _connections.size() <= 1)) {
 				staticThis->sendOTAOK(conn, (uint32_t)root["from"], broadcast);
 			} else {
@@ -213,19 +210,18 @@ void ICACHE_FLASH_ATTR painlessMesh::handleOTA(std::shared_ptr<MeshConnection> c
 				staticThis->broadcastMessage(_nodeId, OTA_BROADCAST, msg, conn);
 			}
         }
-		staticThis->debugMsg(DEBUG, "Freed\n");
         free(b64Data);
     } else if(t_ota == OTA_FIN) {
 		if (broadcast && _connections.size() > 1) {
 			root["msg"].printTo(msg);
-			staticThis->broadcastMessage(_nodeId, OTA_BROADCAST, msg, conn);
+			staticThis->broadcastMessage(_nodeId, OTA_BROADCAST, msg, conn, true);
 		}
 		if (staticThis->_otaError) {
 			staticThis->_otaError = false;
 		} else {
 			if(Update.end(true)){ //true to set the size to the current progress
 				staticThis->debugMsg(APPLICATION, "handleOTA(): OTA Success!\n");
-				ESP.restart();
+				rebootTask.enableDelayed(TASK_SECOND * 5);
 			} else {
 				staticThis->debugMsg(ERROR, "handleOTA(): OTA failed!\n");
 				Update.printError(Serial);

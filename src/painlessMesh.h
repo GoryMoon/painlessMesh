@@ -185,7 +185,7 @@ protected:
     //must be accessable from callback
     bool                sendMessage(std::shared_ptr<MeshConnection> conn, uint32_t destId, uint32_t fromId, meshPackageType type, String &msg, bool priority = false);
     bool                sendMessage(uint32_t destId, uint32_t fromId, meshPackageType type, String &msg, bool priority = false);
-    bool                broadcastMessage(uint32_t fromId, meshPackageType type, String &msg, std::shared_ptr<MeshConnection> exclude = NULL);
+    bool                broadcastMessage(uint32_t fromId, meshPackageType type, String &msg, std::shared_ptr<MeshConnection> exclude = NULL, bool priority = false);
 
     String              buildMeshPackage(uint32_t destId, uint32_t fromId, meshPackageType type, String &msg);
 
@@ -284,6 +284,7 @@ protected:
     Scheduler         _scheduler;
     Task              droppedConnectionTask;
     Task              newConnectionTask;
+    Task              rebootTask;
 
     friend class StationScan;
     friend class MeshConnection;

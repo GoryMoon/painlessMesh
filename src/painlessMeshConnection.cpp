@@ -446,7 +446,7 @@ String ICACHE_FLASH_ATTR painlessMesh::subConnectionJsonHelper(
             ret += String("{\"nodeId\":") + String(sub->nodeId);
             if (sub->root)
                 ret += String(",\"root\":true");
-            ret += String(",\"version\":") + sub->version;
+            ret += String(",\"version\":\"") + String(sub->version) + String("\"");
             ret += String(",\"subs\":") + sub->subConnections + String("}");
         }
     }
@@ -587,20 +587,24 @@ void ICACHE_FLASH_ATTR MeshConnection::handleMessage(String &buffer, uint32_t re
         }
         break;
     case OTA_BROADCAST:
-        if (msg == "Error") {
+        if (msg == "Error" || (msg == "OK" && (uint32_t)root["dest"] != staticThis->getNodeId())) {
             String tempStr;
             root.printTo(tempStr);
             auto conn = staticThis->findConnection((uint32_t)root["dest"], this->nodeId);
             if (conn) {
                 conn->addMessage(tempStr);
             }
+            break;
         }
-        if (staticThis->_otaResponses > 0) {
+        if (staticThis->_otaResponses > 0 && msg == "OK") {
             staticThis->_otaResponses--;
             if (staticThis->_otaResponses == 0) {
-                staticThis->sendOTAOK(rConn, staticThis->_otaFromId, true);
+                auto conn = staticThis->findConnection(staticThis->_otaFromId, this->nodeId);
+                staticThis->sendOTAOK(conn, staticThis->_otaFromId, true);
             }
-        } else {
+            break;  
+        }
+        if (msg != "OK") {
             staticThis->handleOTA(rConn, root, true);
         }
         break;

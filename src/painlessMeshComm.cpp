@@ -42,7 +42,7 @@ bool ICACHE_FLASH_ATTR painlessMesh::broadcastMessage(
         uint32_t from,
         meshPackageType type,
         String &msg,
-        std::shared_ptr<MeshConnection> exclude) {
+        std::shared_ptr<MeshConnection> exclude, bool priority) {
 
     // send a message to every node on the mesh
     bool errCode = false;
@@ -56,7 +56,7 @@ bool ICACHE_FLASH_ATTR painlessMesh::broadcastMessage(
         errCode = true; // Assume true if at least one connections
     for (auto &&connection : _connections) {
         if (!exclude || connection->nodeId != exclude->nodeId) {
-            if (!sendMessage(connection, connection->nodeId, from, type, msg))
+            if (!sendMessage(connection, connection->nodeId, from, type, msg, priority))
                 errCode = false; // If any error return 0
         }
     }
@@ -79,7 +79,7 @@ String ICACHE_FLASH_ATTR painlessMesh::buildMeshPackage(uint32_t destId, uint32_
     case NODE_SYNC_REPLY:
     {
         jsonObj["subs"] = RawJson(msg);
-        jsonObj["version"] = _version;
+        jsonObj["version"] = String(_version);
         if (this->isRoot())
             jsonObj["root"] = true;
         break;
@@ -87,6 +87,11 @@ String ICACHE_FLASH_ATTR painlessMesh::buildMeshPackage(uint32_t destId, uint32_
     case TIME_SYNC:
         jsonObj["msg"] = RawJson(msg);
         break;
+    case OTA_BROADCAST:
+        if (msg != "OK" && msg != "Error") {
+            jsonObj["msg"] = RawJson(msg);
+            break;
+        }
     default:
         jsonObj["msg"] = msg;
     }

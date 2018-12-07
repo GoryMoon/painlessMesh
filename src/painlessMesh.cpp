@@ -64,9 +64,14 @@ void ICACHE_FLASH_ATTR painlessMesh::init(String ssid, String password, uint16_t
         _scheduler.addTask(stationScan.task);
     }
 
+    rebootTask.set(TASK_IMMEDIATE, TASK_ONCE, [this]() {
+        ESP.restart();
+    });
+
     eventHandleInit();
     
     _scheduler.enableAll();
+    _scheduler.addTask(staticThis->rebootTask);
 }
 
 void ICACHE_FLASH_ATTR painlessMesh::stop() {
